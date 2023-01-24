@@ -7,6 +7,9 @@ import android.os.Bundle
 import android.view.*
 import androidx.fragment.app.Fragment
 import androidx.annotation.RequiresApi
+import androidx.core.view.MenuHost
+import androidx.core.view.MenuProvider
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.example.asteroidradar.R
@@ -21,10 +24,9 @@ class MainFragment : Fragment() {
         ViewModelProvider(this, MainViewModelFactory(activity, isConnected()))[MainViewModel::class.java]
     }
 
-    private fun isConnected(): Boolean{
-        val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        return connectivityManager.activeNetworkInfo != null && connectivityManager.activeNetworkInfo!!.isConnected
+    private fun isConnected(): Boolean {
+        val manager = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        return manager.activeNetworkInfo?.isConnected ?: false
     }
 
     private lateinit var adapter: AsteroidsAdapter
@@ -46,24 +48,31 @@ class MainFragment : Fragment() {
             adapter.submitList(it)
         }
         binding.asteroidRecycler.adapter = adapter
-        setHasOptionsMenu(true)
-        // Inflate the layout for this fragment
+
         return binding.root
     }
-    @Deprecated("Deprecated in Java")
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.main_overflow_menu, menu)
-        super.onCreateOptionsMenu(menu, inflater)
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // The usage of an interface lets you inject your own implementation
+        val menuHost: MenuHost = requireActivity()
+
+        menuHost.addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                // Add menu items here
+                menuInflater.inflate(R.menu.main_overflow_menu, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                when (menuItem.itemId) {
+                    R.id.view_week_asteroids -> adapter.submitList(viewModel.weekAsteroid.value)
+                    R.id.view_saved_asteroids -> adapter.submitList(viewModel.allAsteroid.value)
+                    R.id.view_today_asteroids -> adapter.submitList(viewModel.todayAsteroids.value)
+                }
+                return true
+            }
+
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when(item.itemId){
-            R.id.view_week_asteroids -> adapter.submitList(viewModel.weekAsteroid.value)
-            R.id.view_saved_asteroids -> adapter.submitList(viewModel.allAsteroid.value)
-            R.id.view_today_asteroids -> adapter.submitList(viewModel.todayAsteroids.value)
-
-        }
-        return true
-    }
 }

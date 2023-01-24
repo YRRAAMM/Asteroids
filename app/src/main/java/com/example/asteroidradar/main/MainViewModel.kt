@@ -2,7 +2,6 @@ package com.example.asteroidradar.main
 
 import android.app.Application
 import android.os.Build
-import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
@@ -14,6 +13,7 @@ import com.example.asteroidradar.repository.AsteroidRepo
 import com.example.asteroidradar.repository.database.Asteroid
 import com.example.asteroidradar.repository.database.AsteroidRadarDatabase.Companion.getInstance
 import com.example.asteroidradar.repository.database.PictureOfDay
+import com.example.asteroidradar.utiles.Constants.DEFAULT_END_DATE_DAYS
 import com.example.asteroidradar.utiles.toFormattedString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -24,90 +24,86 @@ class MainViewModel(
     private val application: Application,
     private val isConnected: Boolean
 ) : ViewModel() {
-    private val _weekAsteroids = MutableLiveData<List<Asteroid>>()
-    val weekAsteroid: LiveData<List<Asteroid>>
-        get() = _weekAsteroids
-    private val _allAsteroids = MutableLiveData<List<Asteroid>>()
-    val allAsteroid: LiveData<List<Asteroid>>
-        get() = _allAsteroids
-    private val db = getInstance(application)
-    private val repo = AsteroidRepo(db)
-    private val _pic = MutableLiveData<PictureOfDay>()
-    val pic: LiveData<PictureOfDay>
-        get() = _pic
+
+
+
+    private val database = getInstance(application)
+    private val repository = AsteroidRepo(database)
     private val picType = MutableLiveData<String>()
+    private val currentDate = DateUtil.today()
+
+    private val _picture = MutableLiveData<PictureOfDay>()
+    val pic: LiveData<PictureOfDay>
+        get() = _picture
+
     private val _todayAsteroids = MutableLiveData<List<Asteroid>>()
     val todayAsteroids: LiveData<List<Asteroid>>
         get() = _todayAsteroids
-    private val currentDate = DateUtil.today()
+
+    private val _weekAsteroids = MutableLiveData<List<Asteroid>>()
+    val weekAsteroid: LiveData<List<Asteroid>>
+        get() = _weekAsteroids
+
+    private val _allAsteroids = MutableLiveData<List<Asteroid>>()
+    val allAsteroid: LiveData<List<Asteroid>>
+        get() = _allAsteroids
 
     init {
-        refreshPic()
-        todayAsteroids()
-        weekAsteroid()
-        allAsteroids()
+        viewModelScope.launch {
+            refreshPicture()
+        }
+        viewModelScope.launch {
+            asteroidOfTheDay()
+        }
+        viewModelScope.launch {
+            asteroidOfTheWeek()
+        }
+        viewModelScope.launch {
+            allAsteroids()
+        }
     }
 
-    private val tag = "MainViewModel"
+    private suspend fun asteroidOfTheDay() {
+        var asteroids: List<Asteroid>
+        withContext(Dispatchers.IO) {
+            asteroids = repository.getTodayAsteroid()
+            _todayAsteroids.postValue(asteroids)
+        }
+    }
 
-    private fun refreshPic() {
-        Log.i(tag, "refresh: In refresh method")
-        var remotePic: PictureOfDay
+    private suspend fun refreshPicture() {
+        var pictureOfDay: PictureOfDay
         if(isConnected)
-            viewModelScope.launch {
-                withContext(Dispatchers.IO) {
-                    remotePic = repo.refreshPicOfToday()
-                    _pic.postValue(remotePic)
-                    picType.postValue(remotePic.media_type)
-                }
+            withContext(Dispatchers.IO) {
+                pictureOfDay = repository.refreshPicOfToday()
+                _picture.postValue(pictureOfDay)
+                picType.postValue(pictureOfDay.media_type)
             }
         else
-            Toast.makeText(application, """Failed to load Picture of today
-        check your connection
-            """.trimMargin(), Toast.LENGTH_SHORT).show()
+            Toast.makeText(application, "Failed to load Picture of today", Toast.LENGTH_SHORT).show()
     }
 
-
-
-    private fun todayAsteroids() {
-        Log.i(tag, "getAsteroids: $currentDate")
-        viewModelScope.launch {
-
-            var asteroids: List<Asteroid>
-
-            withContext(Dispatchers.IO) {
-                asteroids = repo.getTodayAsteroid()
-                _todayAsteroids.postValue(asteroids)
-            }
-            Log.i(tag, "getAsteroids: $allAsteroid")
-        }
-    }
-
-    private fun weekAsteroid() {
-        var weekAsteroid: List<Asteroid>
+    private suspend fun asteroidOfTheWeek() {
         val nextWeek = DateUtil.getNextWeek(
-            7, DateUtil.today()
+            DEFAULT_END_DATE_DAYS.toLong(), DateUtil.today()
         )
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                weekAsteroid = repo.getNextWeekAsteroid(
-                    currentDate.toFormattedString(), nextWeek.toFormattedString()
 
-                )
-                _weekAsteroids.postValue(weekAsteroid)
-            }
+        val weekAsteroid = withContext(Dispatchers.IO) {
+            repository.getNextWeekAsteroid(
+                currentDate.toFormattedString(), nextWeek.toFormattedString()
 
+            )
         }
+        _weekAsteroids.value = weekAsteroid
+
+
     }
 
-    private fun allAsteroids() {
-        var allAsteroids: List<Asteroid>
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                allAsteroids = repo.getAllAsteroids()
-                _allAsteroids.postValue(allAsteroids)
-            }
+    private suspend fun allAsteroids() {
+        val allAsteroids = withContext(Dispatchers.IO) {
+            repository.getAllAsteroids()
         }
+        _allAsteroids.value = allAsteroids
     }
 
 }
