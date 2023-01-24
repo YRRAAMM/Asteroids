@@ -12,7 +12,7 @@ import com.example.asteroidradar.utiles.toFormattedString
 import org.json.JSONObject
 import java.util.ArrayList
 @RequiresApi(Build.VERSION_CODES.O)
-class AsteroidRepo(private val db: AsteroidRadarDatabase) {
+class AsteroidRepo(private val database: AsteroidRadarDatabase) {
     private var parsedAsteroid = ArrayList<Asteroid>()
 
     private val currentDate = DateUtil.today()
@@ -26,22 +26,22 @@ class AsteroidRepo(private val db: AsteroidRadarDatabase) {
     }
 
     suspend fun storeRemoteAsteroids() {
-        db.asteroidDao.insertAllAsteroids(parsedAsteroid)
+        database.asteroidDao.insertAllAsteroids(parsedAsteroid)
     }
 
     suspend fun getTodayAsteroid(): List<Asteroid>{
-        return db.asteroidDao.getTodayAsteroids(currentDate.toFormattedString())
+        return database.asteroidDao.getTodayAsteroids(currentDate.toFormattedString())
     }
 
     suspend fun getNextWeekAsteroid(
         startDate: String,
         endDate: String
     ): List<Asteroid>{
-        return db.asteroidDao.getWeeksAsteroids(startDate, endDate)
+        return database.asteroidDao.getWeeksAsteroids(startDate, endDate)
     }
 
     suspend fun getAllAsteroids(): List<Asteroid>{
-        return db.asteroidDao.getAllAsteroids()
+        return database.asteroidDao.getAllAsteroids()
     }
 
     suspend fun refreshPicOfToday(): PictureOfDay {
@@ -49,7 +49,7 @@ class AsteroidRepo(private val db: AsteroidRadarDatabase) {
     }
 
     suspend fun deletePreviousAsteroids(){
-        db.asteroidDao.deleteAsteroids(currentDate.time)
+        database.asteroidDao.deleteAsteroids(currentDate.time)
     }
 
 }

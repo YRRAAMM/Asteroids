@@ -11,6 +11,7 @@ interface AsteriodDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAllAsteroids(asteroids: ArrayList<Asteroid>)
 
+
     @Query("select * from asteroid_table where closeApproachDate = :today")
     suspend fun getTodayAsteroids(today: String): List<Asteroid>
 
