@@ -35,6 +35,7 @@ class MainFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+
         val binding = FragmentMainBinding.inflate(inflater)
         binding.lifecycleOwner = this
         binding.viewModel = viewModel
@@ -44,21 +45,23 @@ class MainFragment : Fragment() {
                 MainFragmentDirections.actionMainFragmentToDetailFragment(it)
             )
         })
+
         viewModel.todayAsteroids.observe(viewLifecycleOwner){
             adapter.submitList(it)
         }
+
         binding.asteroidRecycler.adapter = adapter
 
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // The usage of an interface lets you inject your own implementation
+
         val menuHost: MenuHost = requireActivity()
 
         menuHost.addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                // Add menu items here
+
                 menuInflater.inflate(R.menu.main_overflow_menu, menu)
             }
 
